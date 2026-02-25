@@ -1,0 +1,27 @@
+{
+  "name": "FlipStock Inventory",
+  "short_name": "FlipStock",
+  "description": "Home flipping materials & inventory tracker",
+  "start_url": "/flip/index.html",
+  "scope": "/flip/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#f0a500",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/flip/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/flip/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": []
+}

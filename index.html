@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- PWA META -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FlipStock">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f0a500">
+<meta name="description" content="Home flipping materials & inventory tracker">
+
+<!-- PWA MANIFEST -->
+<link rel="manifest" href="/flip/manifest.json">
+
+<!-- APPLE TOUCH ICON (fallback for iOS) -->
+<link rel="apple-touch-icon" href="/flip/icon-192.svg">
+
+<title>FlipStock — Inventory</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --accent: #f0a500;
+    --accent2: #e05c00;
+    --text: #f0ede8;
+    --muted: #7a7a7a;
+    --danger: #e03c3c;
+    --success: #3cb87a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    /* Safe area for iPhone notch/home bar */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* INSTALL BANNER */
+  .install-banner {
+    background: linear-gradient(135deg, #1a1200, #1a0800);
+    border-bottom: 1px solid var(--accent2);
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px;
+  }
+  .install-banner-text { flex: 1; }
+  .install-banner-text strong { display: block; color: var(--accent); font-size: 13px; }
+  .install-banner-text span { color: var(--muted); font-size: 11px; }
+  .install-btn { background: var(--accent); color: #000; border: none; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .install-dismiss { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; }
+
+  /* HEADER */
+  .header {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; color: var(--accent); line-height: 1; }
+  .logo span { color: var(--text); }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .header-count { background: var(--accent); color: #000; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  .offline-badge { background: var(--danger); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; display: none; }
+  .offline-badge.show { display: inline-block; }
+
+  /* NAV TABS */
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 57px;
+    z-index: 99;
+  }
+  .tab {
+    flex: 1; text-align: center; padding: 10px 4px 8px;
+    font-size: 11px; font-weight: 500; color: var(--muted);
+    border: none; background: none; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  /* PAGES */
+  .page { display: none; padding: 16px; padding-bottom: 32px; }
+  .page.active { display: block; }
+
+  /* SEARCH BAR */
+  .search-wrap { position: relative; margin-bottom: 14px; }
+  .search-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px 10px 38px;
+    color: var(--text); font-size: 14px; font-family: inherit; outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 16px; pointer-events: none; }
+
+  /* FILTER CHIPS */
+  .chips { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    white-space: nowrap; padding: 5px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 500; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .chip.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  /* ITEM CARDS */
+  .item-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 10px; overflow: hidden;
+    display: flex; align-items: stretch; transition: border-color 0.2s;
+  }
+  .item-card:active { border-color: var(--accent); }
+  .item-photo {
+    width: 80px; min-height: 80px;
+    background: var(--surface2); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: var(--muted);
+  }
+  .item-photo img { width: 80px; height: 100%; object-fit: cover; }
+  .item-info { flex: 1; padding: 10px 12px; min-width: 0; }
+  .item-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .location-badge {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .location-badge.bin { border-color: #3a7fd5; color: #3a7fd5; }
+  .location-badge.container { border-color: #e05c00; color: #e05c00; }
+  .location-badge.backyard { border-color: #3cb87a; color: #3cb87a; }
+  .item-qty { font-size: 12px; color: var(--muted); }
+  .item-qty strong { color: var(--text); }
+  .item-actions { display: flex; flex-direction: column; border-left: 1px solid var(--border); }
+  .ia-btn { flex: 1; border: none; background: none; color: var(--muted); font-size: 18px; padding: 0 12px; cursor: pointer; transition: color 0.15s; }
+  .ia-btn:active { color: var(--accent); }
+  .ia-btn.del:active { color: var(--danger); }
+
+  /* STATS BAR */
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+  .stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--accent); line-height: 1; }
+  .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ADD FORM */
+  .form-section { margin-bottom: 18px; }
+  .form-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 14px; color: var(--text);
+    font-size: 14px; font-family: inherit; outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237a7a7a' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+  .form-select option { background: #1a1a1a; }
+  .form-textarea { resize: none; height: 70px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* BARCODE SECTION */
+  .barcode-wrap {
+    background: var(--surface2); border: 2px dashed var(--border);
+    border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 10px;
+    position: relative; transition: border-color 0.2s;
+  }
+  .barcode-wrap.scanning { border-color: var(--accent); }
+  #scanner-video { width: 100%; border-radius: 8px; display: none; max-height: 200px; object-fit: cover; }
+  .barcode-result { font-family: monospace; font-size: 13px; color: var(--accent); margin-top: 8px; word-break: break-all; }
+
+  /* PHOTO */
+  .photo-preview-wrap { position: relative; display: inline-block; }
+  .photo-preview { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; border: 2px solid var(--border); display: block; }
+  .photo-remove { position: absolute; top: -6px; right: -6px; background: var(--danger); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  /* BUTTONS */
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 13px; border-radius: 10px; font-size: 15px;
+    font-weight: 600; font-family: inherit; cursor: pointer; border: none; transition: all 0.2s;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:active { background: #d49000; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:active { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; border-radius: 8px; }
+  .btn-row { display: flex; gap: 10px; }
+
+  .photo-upload-area {
+    background: var(--surface2); border: 2px dashed var(--border);
+    border-radius: 12px; padding: 16px; display: flex; align-items: center;
+    gap: 12px; cursor: pointer; transition: border-color 0.2s;
+  }
+  .photo-upload-area:active { border-color: var(--accent); }
+  .photo-upload-icon { font-size: 32px; }
+  .photo-upload-text { font-size: 13px; color: var(--muted); }
+  .photo-upload-text strong { display: block; color: var(--text); font-size: 14px; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 48px 16px; color: var(--muted); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty h3 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
+  .empty p { font-size: 13px; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    z-index: 200; display: flex; align-items: flex-end; opacity: 0;
+    pointer-events: none; transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    padding: 20px 16px; padding-bottom: calc(32px + env(safe-area-inset-bottom));
+    width: 100%; max-height: 92dvh; overflow-y: auto;
+    transform: translateY(30px); transition: transform 0.25s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; }
+  .modal-close { background: var(--surface2); border: none; color: var(--text); width: 30px; height: 30px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  /* DETAIL */
+  .detail-photo { width: 100%; height: 200px; border-radius: 12px; margin-bottom: 14px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 48px; overflow: hidden; }
+  .detail-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .detail-name { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1px; margin-bottom: 8px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .detail-field { background: var(--surface2); border-radius: 8px; padding: 10px 12px; }
+  .detail-field-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 3px; }
+  .detail-field-value { font-size: 14px; font-weight: 500; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: calc(24px + env(safe-area-inset-bottom)); left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--success); color: #fff; padding: 10px 20px; border-radius: 30px;
+    font-size: 13px; font-weight: 600; z-index: 300; transition: transform 0.3s; white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--danger); }
+
+  input[type="file"] { display: none; }
+  input[type="number"] { -moz-appearance: textfield; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+  .project-banner {
+    background: linear-gradient(135deg, #1a1200, #1a0a00);
+    border: 1px solid var(--accent2); border-radius: 12px;
+    padding: 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .project-icon { font-size: 28px; }
+  .project-name { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; color: var(--accent); }
+  .project-sub { font-size: 11px; color: var(--muted); }
+  .project-edit { margin-left: auto; background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; }
+
+  #canvas { display: none; }
+
+  /* iOS install instructions */
+  .ios-instructions { background: var(--surface2); border-radius: 10px; padding: 14px; font-size: 13px; line-height: 1.7; }
+  .ios-instructions strong { color: var(--accent); }
+  .ios-step { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .ios-step:last-child { border-bottom: none; }
+  .ios-step-num { background: var(--accent); color: #000; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- INSTALL BANNER (shown when installable) -->
+<div class="install-banner" id="install-banner" style="display:none;">
+  <div>📲</div>
+  <div class="install-banner-text">
+    <strong>Add FlipStock to Home Screen</strong>
+    <span>Use as a real app, no browser needed</span>
+  </div>
+  <button class="install-btn" id="install-btn" onclick="triggerInstall()">Install</button>
+  <button class="install-dismiss" onclick="dismissBanner()">✕</button>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">Flip<span>Stock</span></div>
+  <div class="header-right">
+    <span class="offline-badge" id="offline-badge">OFFLINE</span>
+    <span class="header-count" id="header-count">0 items</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('inventory', this)"><span class="tab-icon">📦</span>Inventory</button>
+  <button class="tab" onclick="showTab('add', this)"><span class="tab-icon">➕</span>Add Item</button>
+  <button class="tab" onclick="showTab('summary', this)"><span class="tab-icon">📊</span>Summary</button>
+  <button class="tab" onclick="showTab('install', this)"><span class="tab-icon">📲</span>Install</button>
+</div>
+
+<!-- ===== INVENTORY PAGE ===== -->
+<div id="page-inventory" class="page active">
+  <div class="project-banner">
+    <div class="project-icon">🏠</div>
+    <div>
+      <div class="project-name" id="project-name-display">Set Project Name</div>
+      <div class="project-sub" id="project-sub-display">Tap edit to name your current flip</div>
+    </div>
+    <button class="project-edit" onclick="openProjectModal()">Edit</button>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" type="text" placeholder="Search items…" id="search-input" oninput="renderInventory()">
+  </div>
+
+  <div class="chips">
+    <div class="chip active" onclick="setFilter('all', this)">All</div>
+    <div class="chip" onclick="setFilter('bin', this)">📦 Bins</div>
+    <div class="chip" onclick="setFilter('container', this)">🚢 Containers</div>
+    <div class="chip" onclick="setFilter('backyard', this)">☀️ Backyard</div>
+  </div>
+
+  <div id="inventory-list"></div>
+</div>
+
+<!-- ===== ADD ITEM PAGE ===== -->
+<div id="page-add" class="page">
+  <div class="form-section">
+    <label class="form-label">📊 Barcode Scanner</label>
+    <div class="barcode-wrap" id="barcode-wrap">
+      <video id="scanner-video" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+      <div id="barcode-placeholder">
+        <div style="font-size:36px; margin-bottom:6px;">📊</div>
+        <div style="font-size:13px; color:var(--muted);">Tap to scan barcode with camera</div>
+      </div>
+      <div class="barcode-result" id="barcode-result"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="startScan()">📷 Scan</button>
+      <button class="btn btn-outline btn-sm" id="stop-scan-btn" onclick="stopScan()" style="display:none;">⏹ Stop</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('barcode-manual').focus()">⌨️ Manual</button>
+    </div>
+    <input class="form-input" type="text" id="barcode-manual" placeholder="Or type barcode manually…" style="margin-top:8px;" oninput="document.getElementById('barcode-result').textContent = this.value ? '# ' + this.value : ''">
+  </div>
+
+  <div class="form-section">
+    <label class="form-label">Item Name *</label>
+    <input class="form-input" type="text" id="item-name" placeholder="e.g. 2x4 Lumber, PVC Pipe, Door Hinge…">
+  </div>
+
+  <div class="form-section">
+    <label class="form-label">Category</label>
+    <select class="form-select" id="item-category">
+      <option value="Lumber & Framing">🪵 Lumber & Framing</option>
+      <option value="Plumbing">🔧 Plumbing</option>
+      <option value="Electrical">⚡ Electrical</option>
+      <option value="Flooring">🏠 Flooring</option>
+      <option value="Doors & Windows">🚪 Doors & Windows</option>
+      <option value="Hardware & Fasteners">🔩 Hardware & Fasteners</option>
+      <option value="Paint & Finishing">🎨 Paint & Finishing</option>
+      <option value="HVAC">❄️ HVAC</option>
+      <option value="Tools">🔨 Tools</option>
+      <option value="Other">📦 Other</option>
+    </select>
+  </div>
+
+  <div class="form-section">
+    <div class="form-row">
+      <div>
+        <label class="form-label">Quantity</label>
+        <input class="form-input" type="number" id="item-qty" placeholder="1" min="0">
+      </div>
+      <div>
+        <label class="form-label">Unit</label>
+        <select class="form-select" id="item-unit">
+          <option>pcs</option><option>ft</option><option>lbs</option><option>boxes</option><option>bags</option><option>rolls</option><option>sheets</option><option>gal</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <label class="form-label">📍 Storage Location</label>
+    <select class="form-select" id="item-location-type" onchange="updateLocationFields()">
+      <option value="bin">📦 Bin</option>
+      <option value="container">🚢 Shipping Container</option>
+      <option value="backyard">☀️ Backyard</option>
+    </select>
+  </div>
+
+  <div class="form-section" id="location-detail-section">
+    <label class="form-label" id="location-detail-label">Bin Number / ID</label>
+    <input class="form-input" type="text" id="item-location-detail" placeholder="e.g. BIN-12, Row A, Section 3…">
+  </div>
+
+  <div class="form-section" id="backyard-custom" style="display:none;">
+    <label class="form-label">Backyard Spot Description</label>
+    <input class="form-input" type="text" id="item-backyard-spot" placeholder="e.g. Near fence, Under tarp, Left side…">
+  </div>
+
+  <div class="form-section">
+    <label class="form-label">📸 Photo</label>
+    <div class="photo-upload-area" onclick="triggerPhoto()" id="photo-upload-area">
+      <div class="photo-upload-icon">📷</div>
+      <div class="photo-upload-text">
+        <strong>Add Photo</strong>
+        Take a photo or choose from gallery
+      </div>
+    </div>
+    <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(event)">
+    <div id="photo-preview-container" style="margin-top:10px; display:none;">
+      <div class="photo-preview-wrap">
+        <img class="photo-preview" id="photo-preview-img" src="" alt="Preview">
+        <button class="photo-remove" onclick="removePhoto()">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <label class="form-label">Notes (optional)</label>
+    <textarea class="form-textarea" id="item-notes" placeholder="Condition, measurements, supplier info…"></textarea>
+  </div>
+
+  <button class="btn btn-primary" onclick="addItem()">✅ Save Item to Inventory</button>
+  <div style="height:10px;"></div>
+  <button class="btn btn-outline" onclick="clearForm()">Clear Form</button>
+</div>
+
+<!-- ===== SUMMARY PAGE ===== -->
+<div id="page-summary" class="page">
+  <div class="stats-row" id="stats-row"></div>
+  <div class="section-title">By Location</div>
+  <div id="location-breakdown"></div>
+  <hr class="divider">
+  <div class="section-title">By Category</div>
+  <div id="category-breakdown"></div>
+  <hr class="divider">
+  <button class="btn btn-danger btn-sm" style="margin-top:4px;" onclick="confirmClear()">🗑 Clear All Data</button>
+</div>
+
+<!-- ===== INSTALL PAGE ===== -->
+<div id="page-install" class="page">
+  <div style="text-align:center; padding: 24px 0 20px;">
+    <div style="font-size:56px; margin-bottom:8px;">📲</div>
+    <div style="font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; color:var(--accent); margin-bottom:6px;">Add to Home Screen</div>
+    <div style="font-size:13px; color:var(--muted);">Use FlipStock as a real app — no browser bar, works offline</div>
+  </div>
+
+  <div id="android-install" style="display:none; margin-bottom:20px;">
+    <div class="section-title">Android (Chrome)</div>
+    <button class="btn btn-primary" onclick="triggerInstall()" style="margin-bottom:12px;">⬇️ Install FlipStock Now</button>
+    <div style="font-size:12px; color:var(--muted); text-align:center;">Or tap the menu (⋮) → "Add to Home Screen"</div>
+  </div>
+
+  <div id="ios-install" style="display:none; margin-bottom:20px;">
+    <div class="section-title">iPhone (Safari)</div>
+    <div class="ios-instructions">
+      <div class="ios-step"><div class="ios-step-num">1</div><div>Open this page in <strong>Safari</strong> (not Chrome)</div></div>
+      <div class="ios-step"><div class="ios-step-num">2</div><div>Tap the <strong>Share button</strong> at the bottom of the screen (the box with an arrow pointing up)</div></div>
+      <div class="ios-step"><div class="ios-step-num">3</div><div>Scroll down and tap <strong>"Add to Home Screen"</strong></div></div>
+      <div class="ios-step"><div class="ios-step-num">4</div><div>Tap <strong>"Add"</strong> in the top right — FlipStock will appear on your home screen!</div></div>
+    </div>
+  </div>
+
+  <div id="already-installed" style="display:none; text-align:center; padding:20px; background:var(--surface); border-radius:12px; border:1px solid var(--success);">
+    <div style="font-size:32px; margin-bottom:8px;">✅</div>
+    <div style="font-weight:600; color:var(--success);">Already Installed!</div>
+    <div style="font-size:13px; color:var(--muted); margin-top:4px;">FlipStock is running as an installed app</div>
+  </div>
+
+  <div id="generic-install" style="display:none;">
+    <div class="section-title">How to Install</div>
+    <div class="ios-instructions">
+      <div class="ios-step"><div class="ios-step-num">📱</div><div><strong>iPhone:</strong> Open in Safari → Share → Add to Home Screen</div></div>
+      <div class="ios-step"><div class="ios-step-num">🤖</div><div><strong>Android:</strong> Open in Chrome → Menu (⋮) → Add to Home Screen</div></div>
+    </div>
+  </div>
+
+  <hr class="divider" style="margin-top:24px;">
+  <div class="section-title">Share / Backup</div>
+  <div class="btn-row" style="flex-wrap:wrap; gap:8px;">
+    <button class="btn btn-outline btn-sm" onclick="exportData()">📤 Export Data (JSON)</button>
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-input').click()">📥 Import Data</button>
+  </div>
+  <input type="file" id="import-input" accept=".json" onchange="importData(event)">
+  <div style="font-size:11px; color:var(--muted); margin-top:8px;">Export your data as a backup file you can re-import anytime.</div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="detail-modal-title">Item Detail</div>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div id="detail-modal-body"></div>
+  </div>
+</div>
+
+<!-- PROJECT MODAL -->
+<div class="modal-overlay" id="project-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Current Project</div>
+      <button class="modal-close" onclick="closeProjectModal()">✕</button>
+    </div>
+    <div class="form-section">
+      <label class="form-label">Project / Property Name</label>
+      <input class="form-input" type="text" id="project-input" placeholder="e.g. 123 Oak Street Flip">
+    </div>
+    <div class="form-section">
+      <label class="form-label">Address (optional)</label>
+      <input class="form-input" type="text" id="project-address" placeholder="Full property address">
+    </div>
+    <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ——— STATE ———
+let items = JSON.parse(localStorage.getItem('flipstock_items') || '[]');
+let project = JSON.parse(localStorage.getItem('flipstock_project') || '{"name":"","address":""}');
+let currentFilter = 'all';
+let scanStream = null;
+let scanInterval = null;
+let currentPhotoData = null;
+let deferredPrompt = null;
+
+// ——— PWA: SERVICE WORKER ———
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/flip/sw.js', { scope: '/flip/' }).then(reg => {
+    console.log('SW registered:', reg.scope);
+  }).catch(err => console.log('SW error:', err));
+}
+
+// ——— PWA: INSTALL PROMPT (Android/Chrome) ———
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  document.getElementById('install-banner').style.display = 'none';
+  showToast('✅ FlipStock installed!');
+});
+
+function triggerInstall() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(result => {
+      if (result.outcome === 'accepted') showToast('Installing…');
+      deferredPrompt = null;
+    });
+  }
+}
+
+function dismissBanner() {
+  document.getElementById('install-banner').style.display = 'none';
+}
+
+// ——— PWA: OFFLINE DETECTION ———
+function updateOnlineStatus() {
+  document.getElementById('offline-badge').classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ——— DETECT PLATFORM FOR INSTALL PAGE ———
+function setupInstallPage() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+
+  if (isStandalone) {
+    document.getElementById('already-installed').style.display = 'block';
+  } else if (isIOS) {
+    document.getElementById('ios-install').style.display = 'block';
+  } else if (isAndroid || deferredPrompt) {
+    document.getElementById('android-install').style.display = 'block';
+  } else {
+    document.getElementById('generic-install').style.display = 'block';
+  }
+}
+
+// ——— INIT ———
+renderInventory();
+renderSummary();
+updateHeader();
+loadProject();
+setupInstallPage();
+
+// ——— TABS ———
+function showTab(tab, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  el.classList.add('active');
+  if (tab === 'summary') renderSummary();
+  if (tab !== 'add') stopScan();
+  if (tab === 'install') setupInstallPage();
+}
+
+// ——— INVENTORY ———
+function renderInventory() {
+  const list = document.getElementById('inventory-list');
+  const q = document.getElementById('search-input').value.toLowerCase();
+  let filtered = items.filter(i => {
+    const matchSearch = !q || i.name.toLowerCase().includes(q) || (i.barcode||'').includes(q) || (i.notes||'').toLowerCase().includes(q);
+    const matchFilter = currentFilter === 'all' || i.locationType === currentFilter;
+    return matchSearch && matchFilter;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty">
+      <div class="empty-icon">${currentFilter === 'bin' ? '📦' : currentFilter === 'container' ? '🚢' : currentFilter === 'backyard' ? '🌿' : '📋'}</div>
+      <h3>No items found</h3>
+      <p>${q ? 'Try a different search' : 'Tap ➕ Add Item to get started'}</p>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(item => `
+    <div class="item-card" onclick="openDetail('${item.id}')">
+      <div class="item-photo">
+        ${item.photo ? `<img src="${item.photo}" alt="">` : getCategoryIcon(item.category)}
+      </div>
+      <div class="item-info">
+        <div class="item-name">${item.name}</div>
+        <div class="item-meta">
+          <span class="location-badge ${item.locationType}">${getLocationLabel(item)}</span>
+          ${item.barcode ? `<span style="font-family:monospace;font-size:10px;color:var(--muted);">${item.barcode}</span>` : ''}
+        </div>
+        <div class="item-qty"><strong>${item.qty || 0} ${item.unit}</strong> · ${item.category}</div>
+      </div>
+      <div class="item-actions">
+        <button class="ia-btn" onclick="event.stopPropagation(); quickEdit('${item.id}')">✏️</button>
+        <button class="ia-btn del" onclick="event.stopPropagation(); deleteItem('${item.id}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function getCategoryIcon(cat) {
+  const icons = {'Lumber & Framing':'🪵','Plumbing':'🔧','Electrical':'⚡','Flooring':'🏠','Doors & Windows':'🚪','Hardware & Fasteners':'🔩','Paint & Finishing':'🎨','HVAC':'❄️','Tools':'🔨','Other':'📦'};
+  return icons[cat] || '📦';
+}
+
+function getLocationLabel(item) {
+  const icons = {bin: '📦', container: '🚢', backyard: '☀️'};
+  let label = (icons[item.locationType] || '📍') + ' ';
+  if (item.locationType === 'bin') label += item.locationDetail || 'Bin';
+  else if (item.locationType === 'container') label += item.locationDetail || 'Container';
+  else label += item.backyardSpot || 'Backyard';
+  return label;
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderInventory();
+}
+
+// ——— ADD ITEM ———
+function updateLocationFields() {
+  const type = document.getElementById('item-location-type').value;
+  const label = document.getElementById('location-detail-label');
+  const detail = document.getElementById('location-detail-section');
+  const backyard = document.getElementById('backyard-custom');
+  if (type === 'bin') { label.textContent = 'Bin Number / ID'; detail.style.display = ''; backyard.style.display = 'none'; }
+  else if (type === 'container') { label.textContent = 'Container ID / Section'; detail.style.display = ''; backyard.style.display = 'none'; }
+  else { detail.style.display = 'none'; backyard.style.display = ''; }
+}
+
+function addItem() {
+  const name = document.getElementById('item-name').value.trim();
+  if (!name) { showToast('Item name is required', true); return; }
+  const barcode = document.getElementById('barcode-result').textContent.replace('# ', '') || document.getElementById('barcode-manual').value;
+  const item = {
+    id: Date.now().toString(),
+    name,
+    barcode: barcode || '',
+    category: document.getElementById('item-category').value,
+    qty: parseFloat(document.getElementById('item-qty').value) || 0,
+    unit: document.getElementById('item-unit').value,
+    locationType: document.getElementById('item-location-type').value,
+    locationDetail: document.getElementById('item-location-detail').value.trim(),
+    backyardSpot: document.getElementById('item-backyard-spot').value.trim(),
+    notes: document.getElementById('item-notes').value.trim(),
+    photo: currentPhotoData || null,
+    addedAt: new Date().toLocaleDateString()
+  };
+  items.unshift(item);
+  save();
+  clearForm();
+  showToast('✅ Item saved!');
+  // Switch to inventory tab
+  document.querySelector('.tab').click();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-inventory').classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab')[0].classList.add('active');
+}
+
+function clearForm() {
+  ['item-name','item-qty','item-location-detail','item-backyard-spot','item-notes','barcode-manual'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('barcode-result').textContent = '';
+  removePhoto();
+  stopScan();
+}
+
+function deleteItem(id) {
+  if (!confirm('Delete this item?')) return;
+  items = items.filter(i => i.id !== id);
+  save();
+  renderInventory();
+  showToast('Item deleted', true);
+}
+
+function quickEdit(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const newQty = prompt(`Update quantity for "${item.name}":`, item.qty);
+  if (newQty === null) return;
+  item.qty = parseFloat(newQty) || 0;
+  save();
+  renderInventory();
+  showToast('Quantity updated');
+}
+
+// ——— DETAIL MODAL ———
+function openDetail(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  document.getElementById('detail-modal-title').textContent = item.name;
+  document.getElementById('detail-modal-body').innerHTML = `
+    <div class="detail-photo">
+      ${item.photo ? `<img src="${item.photo}" alt="">` : getCategoryIcon(item.category)}
+    </div>
+    <div class="detail-name">${item.name}</div>
+    <div class="detail-grid">
+      <div class="detail-field"><div class="detail-field-label">Quantity</div><div class="detail-field-value">${item.qty} ${item.unit}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Category</div><div class="detail-field-value">${item.category}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Location</div><div class="detail-field-value">${getLocationLabel(item)}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Added</div><div class="detail-field-value">${item.addedAt}</div></div>
+      ${item.barcode ? `<div class="detail-field" style="grid-column:1/-1"><div class="detail-field-label">Barcode</div><div class="detail-field-value" style="font-family:monospace;">${item.barcode}</div></div>` : ''}
+      ${item.notes ? `<div class="detail-field" style="grid-column:1/-1"><div class="detail-field-label">Notes</div><div class="detail-field-value">${item.notes}</div></div>` : ''}
+    </div>
+    <button class="btn btn-danger" style="margin-top:8px;" onclick="deleteItem('${item.id}'); closeDetailModal()">🗑 Delete Item</button>
+  `;
+  document.getElementById('detail-modal').classList.add('open');
+}
+function closeDetailModal() { document.getElementById('detail-modal').classList.remove('open'); }
+
+// ——— PROJECT MODAL ———
+function openProjectModal() {
+  document.getElementById('project-input').value = project.name;
+  document.getElementById('project-address').value = project.address;
+  document.getElementById('project-modal').classList.add('open');
+}
+function closeProjectModal() { document.getElementById('project-modal').classList.remove('open'); }
+function saveProject() {
+  project.name = document.getElementById('project-input').value.trim();
+  project.address = document.getElementById('project-address').value.trim();
+  localStorage.setItem('flipstock_project', JSON.stringify(project));
+  loadProject();
+  closeProjectModal();
+  showToast('Project saved!');
+}
+function loadProject() {
+  document.getElementById('project-name-display').textContent = project.name || 'No Project Set';
+  document.getElementById('project-sub-display').textContent = project.address || 'Tap edit to name your current flip';
+}
+
+// ——— SUMMARY ———
+function renderSummary() {
+  const bins = items.filter(i => i.locationType === 'bin').length;
+  const containers = items.filter(i => i.locationType === 'container').length;
+  const backyard = items.filter(i => i.locationType === 'backyard').length;
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${items.length}</div><div class="stat-label">Total Items</div></div>
+    <div class="stat-card"><div class="stat-num">${bins}</div><div class="stat-label">In Bins</div></div>
+    <div class="stat-card"><div class="stat-num">${containers + backyard}</div><div class="stat-label">Outdoor</div></div>
+  `;
+  const byLoc = {bin: [], container: [], backyard: []};
+  items.forEach(i => byLoc[i.locationType]?.push(i));
+  document.getElementById('location-breakdown').innerHTML = Object.entries({bin:'📦 Bins', container:'🚢 Containers', backyard:'☀️ Backyard'}).map(([key, label]) => {
+    const group = byLoc[key];
+    if (!group.length) return '';
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;">
+      <div style="font-weight:600;margin-bottom:6px;">${label} <span style="color:var(--muted);font-size:12px;">(${group.length})</span></div>
+      ${group.map(i => `<div style="font-size:13px;color:var(--muted);padding:2px 0;">${i.name} — ${i.qty} ${i.unit}</div>`).join('')}
+    </div>`;
+  }).join('');
+  const byCat = {};
+  items.forEach(i => { byCat[i.category] = (byCat[i.category]||0) + 1; });
+  document.getElementById('category-breakdown').innerHTML = Object.entries(byCat).sort((a,b) => b[1]-a[1]).map(([cat, cnt]) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;">${cat}</span>
+      <span style="font-weight:600;color:var(--accent);">${cnt}</span>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:13px;">No items yet</div>';
+}
+
+// ——— BARCODE ———
+async function startScan() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    scanStream = stream;
+    const video = document.getElementById('scanner-video');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('barcode-placeholder').style.display = 'none';
+    document.getElementById('stop-scan-btn').style.display = '';
+    document.getElementById('barcode-wrap').classList.add('scanning');
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector();
+      scanInterval = setInterval(async () => {
+        try {
+          const canvas = document.getElementById('canvas');
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          canvas.getContext('2d').drawImage(video, 0, 0);
+          const barcodes = await detector.detect(canvas);
+          if (barcodes.length) {
+            document.getElementById('barcode-result').textContent = '# ' + barcodes[0].rawValue;
+            document.getElementById('item-name').focus();
+            stopScan();
+            showToast('Barcode scanned!');
+          }
+        } catch(e) {}
+      }, 500);
+    } else {
+      document.getElementById('barcode-result').textContent = '⚠️ Auto-detect not supported. Read the number shown.';
+    }
+  } catch(e) { showToast('Camera access denied', true); }
+}
+
+function stopScan() {
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  const video = document.getElementById('scanner-video');
+  video.style.display = 'none'; video.srcObject = null;
+  document.getElementById('barcode-placeholder').style.display = '';
+  document.getElementById('stop-scan-btn').style.display = 'none';
+  document.getElementById('barcode-wrap').classList.remove('scanning');
+}
+
+// ——— PHOTO ———
+function triggerPhoto() { document.getElementById('photo-input').click(); }
+function handlePhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    currentPhotoData = ev.target.result;
+    document.getElementById('photo-preview-img').src = currentPhotoData;
+    document.getElementById('photo-preview-container').style.display = 'block';
+    document.getElementById('photo-upload-area').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+function removePhoto() {
+  currentPhotoData = null;
+  document.getElementById('photo-preview-container').style.display = 'none';
+  document.getElementById('photo-upload-area').style.display = 'flex';
+  document.getElementById('photo-input').value = '';
+}
+
+// ——— EXPORT / IMPORT ———
+function exportData() {
+  const data = { items, project, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'flipstock-backup.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Data exported!');
+}
+
+function importData(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.items && Array.isArray(data.items)) {
+        if (confirm(`Import ${data.items.length} items? This will replace current data.`)) {
+          items = data.items;
+          if (data.project) project = data.project;
+          save();
+          loadProject();
+          showToast(`Imported ${items.length} items!`);
+        }
+      } else { showToast('Invalid file format', true); }
+    } catch { showToast('Could not read file', true); }
+  };
+  reader.readAsText(file);
+}
+
+// ——— UTILS ———
+function save() {
+  localStorage.setItem('flipstock_items', JSON.stringify(items));
+  updateHeader();
+  renderInventory();
+}
+function updateHeader() {
+  document.getElementById('header-count').textContent = items.length + (items.length === 1 ? ' item' : ' items');
+}
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2500);
+}
+function confirmClear() {
+  if (confirm('Delete ALL inventory data? This cannot be undone.')) {
+    items = []; save(); renderSummary();
+    showToast('All data cleared', true);
+  }
+}
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) { el.classList.remove('open'); stopScan(); } });
+});
+</script>
+</body>
+</html>
