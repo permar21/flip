@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="38" fill="#0f0f0f"/>
+  <rect x="16" y="16" width="160" height="160" rx="28" fill="#1a1a1a"/>
+  <!-- Box shape -->
+  <rect x="44" y="80" width="104" height="72" rx="6" fill="#f0a500"/>
+  <rect x="44" y="80" width="104" height="18" rx="6" fill="#d49000"/>
+  <!-- Tape line -->
+  <rect x="88" y="80" width="16" height="72" fill="#c47800"/>
+  <!-- Lid top flaps -->
+  <rect x="44" y="56" width="44" height="28" rx="4" fill="#f0a500" transform="rotate(-8 66 70)"/>
+  <rect x="104" y="56" width="44" height="28" rx="4" fill="#f0a500" transform="rotate(8 126 70)"/>
+  <!-- Text -->
+  <text x="96" y="178" font-family="Arial Black, sans-serif" font-size="18" font-weight="900" fill="#f0a500" text-anchor="middle" letter-spacing="3">FS</text>
+</svg>
